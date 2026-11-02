@@ -204,14 +204,14 @@ body{background:radial-gradient(ellipse at 15% 10%,#fff1e6 0,transparent 45%),ra
 #page-9 .s-copy{padding:10px 12px;border-radius:8px}
 #page-9 .enterprise-base{margin:22px 14px 12px;padding:16px 12px;background:#fff1e5;border:1px solid #f0d2bd;border-radius:10px;box-shadow:0 8px 18px #a7471908;color:#a74719}
 #page-9 .enterprise-base span{color:#d6834a}
-/* Keep type and spacing readable across phone widths and heights. */
+/* Fit complete compositions between the safe-area header and footer on phones. */
 @media(max-width:699px){
  .app{height:100%;height:100dvh;margin:0;border-radius:0}
- .page{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;padding-top:calc(86px + env(safe-area-inset-top));padding-bottom:calc(82px + env(safe-area-inset-bottom))}
+ .page{overflow:hidden!important;padding-top:calc(86px + env(safe-area-inset-top));padding-bottom:calc(82px + env(safe-area-inset-bottom))}
  .page-content{min-height:0!important;will-change:auto}
  .topbar{padding-top:calc(24px + env(safe-area-inset-top))}
  .footer{height:calc(64px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom)}
- .cover,.end{overflow-y:auto!important}
+ .cover,.end{overflow:hidden!important}
  #page-9{overflow-y:hidden!important;padding-top:calc(82px + env(safe-area-inset-top));padding-bottom:calc(68px + env(safe-area-inset-bottom))}
  #page-9 .page-content{gap:8px}
  #page-9 .enterprise-curve{height:clamp(250px,calc(100dvh - 300px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),440px);margin:0}
@@ -328,10 +328,10 @@ const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
 let entered=false,transitionAnimations=[];
 const revealObserver=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting&&entry.target.closest('.page').classList.contains('active')){entry.target.classList.remove('pending');entry.target.classList.add('play');revealObserver.unobserve(entry.target)}})},{root:document.querySelector('.app'),threshold:.08});
 function fitPages(){
- const phone=matchMedia('(max-width:699px)').matches;
- sections.forEach(el=>{const inner=el.querySelector('.page-content');if(!inner)return;inner.style.transform='none';inner.style.minHeight='0';if(phone&&el.id!=='page-9'){el.dataset.fit='1.000';return}const style=getComputedStyle(el);const available=el.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);const h=inner.scrollHeight;const scale=Math.min(1,available/Math.max(h,1));inner.style.transform=`scale(${scale})`;el.dataset.fit=scale.toFixed(3)});
+ sections.forEach(el=>{const inner=el.querySelector('.page-content');if(!inner)return;inner.style.transform='none';inner.style.minHeight='0';const style=getComputedStyle(el);const available=el.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);const h=inner.scrollHeight;const scale=Math.min(1,available/Math.max(h,1));inner.style.transform=`scale(${scale})`;el.dataset.fit=scale.toFixed(3)});
 }
 window.addEventListener('resize',fitPages);document.fonts.ready.then(fitPages);
+window.visualViewport?.addEventListener('resize',fitPages);
 let sceneAnimations=[],sceneFrames=[],sceneGeneration=0;
 function stopScene(){sceneGeneration++;sceneAnimations.forEach(a=>a.cancel());sceneAnimations=[];sceneFrames.forEach(id=>cancelAnimationFrame(id));sceneFrames=[];document.querySelectorAll('.count-value').forEach(n=>n.textContent=n.dataset.value)}
 function animatePage(el){
@@ -406,18 +406,18 @@ function go(index){
  document.getElementById('prev').disabled=index===0;document.getElementById('next').disabled=index===pages.length-1;
  document.querySelectorAll('#toclinks button').forEach((b,i)=>b.setAttribute('aria-current',String(i===index)));
  document.querySelectorAll('[data-group]').forEach(b=>b.classList.toggle('active',b.dataset.group===pages[current].section));
- document.querySelector('.hint').textContent=index===pages.length-1?'阅读完成':sections[current].scrollHeight>sections[current].clientHeight+4?'滑动阅读 · 底部翻页':'上滑翻页';
+ document.querySelector('.hint').textContent=index===pages.length-1?'阅读完成':'上滑翻页';
  history.replaceState(null,'','#'+(index+1));locked=true;clearTimeout(timer);timer=setTimeout(()=>locked=false,750);
 }
 function toggleMenu(force){menuOpen=typeof force==='boolean'?force:!menuOpen;const t=document.getElementById('toc');t.classList.toggle('open',menuOpen);t.inert=!menuOpen;document.querySelector('.menu-button').setAttribute('aria-expanded',String(menuOpen));sections[current].inert=menuOpen;document.querySelector('.footer').inert=menuOpen;if(menuOpen)t.querySelector('button').focus();else document.querySelector('.menu-button').focus()}
 function turn(dir){if(locked||menuOpen)return;go(current+dir)}
 let sy=0,sx=0,startScroll=0;
 container.addEventListener('touchstart',e=>{sy=e.touches[0].clientY;sx=e.touches[0].clientX;startScroll=sections[current].scrollTop},{passive:true});
-container.addEventListener('touchend',e=>{const dy=sy-e.changedTouches[0].clientY,dx=sx-e.changedTouches[0].clientX;if(Math.abs(dy)<=55||Math.abs(dy)<=Math.abs(dx))return;const p=sections[current],max=p.scrollHeight-p.clientHeight;if(max>4&&!(dy>0&&startScroll>=max-4)&&!(dy<0&&startScroll<=4))return;turn(dy>0?1:-1)},{passive:true});
+container.addEventListener('touchend',e=>{const dy=sy-e.changedTouches[0].clientY,dx=sx-e.changedTouches[0].clientX;if(Math.abs(dy)>55&&Math.abs(dy)>Math.abs(dx))turn(dy>0?1:-1)},{passive:true});
 let wheelTotal=0,lastWheel=0,wheelCanNext=false,wheelCanPrev=false,wheelUsed=false;
 const edgeTimes=new WeakMap();
 sections.forEach(p=>p.addEventListener('scroll',()=>{const edge=p.scrollTop>=p.scrollHeight-p.clientHeight-3?'bottom':p.scrollTop<=3?'top':'middle';const old=edgeTimes.get(p);if(!old||old.edge!==edge)edgeTimes.set(p,{edge,time:Date.now()})},{passive:true}));
-container.addEventListener('wheel',e=>{const now=Date.now(),p=sections[current];if(now-lastWheel>220){wheelTotal=0;wheelUsed=false;wheelCanNext=true;wheelCanPrev=true}lastWheel=now;const edgeState=edgeTimes.get(p);if(locked||menuOpen||wheelUsed||(edgeState&&now-edgeState.time<1000))return;const max=p.scrollHeight-p.clientHeight;if(max>4&&!(e.deltaY>0&&p.scrollTop>=max-4)&&!(e.deltaY<0&&p.scrollTop<=4))return;wheelTotal+=e.deltaY;if(Math.abs(wheelTotal)>65&&((wheelTotal>0&&wheelCanNext)||(wheelTotal<0&&wheelCanPrev))){wheelUsed=true;turn(wheelTotal>0?1:-1)}},{passive:true});
+container.addEventListener('wheel',e=>{const now=Date.now(),p=sections[current];if(now-lastWheel>220){wheelTotal=0;wheelUsed=false;wheelCanNext=true;wheelCanPrev=true}lastWheel=now;const edgeState=edgeTimes.get(p);if(locked||menuOpen||wheelUsed||(edgeState&&now-edgeState.time<1000))return;wheelTotal+=e.deltaY;if(Math.abs(wheelTotal)>65&&((wheelTotal>0&&wheelCanNext)||(wheelTotal<0&&wheelCanPrev))){wheelUsed=true;turn(wheelTotal>0?1:-1)}},{passive:true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&menuOpen){toggleMenu(false);return}if(menuOpen)return;if(['ArrowDown','PageDown','ArrowRight'].includes(e.key)){e.preventDefault();go(current+1)}if(['ArrowUp','PageUp','ArrowLeft'].includes(e.key)){e.preventDefault();go(current-1)}if(e.key==='Home'){e.preventDefault();go(0)}if(e.key==='End'){e.preventDefault();go(pages.length-1)}});
 go(Math.max(0,Math.min(pages.length-1,(parseInt(location.hash.slice(1))||1)-1)));
 </script></body></html>
